@@ -14,6 +14,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.R
 import com.ict.expensemanagement.adapter.GoalAdapter
 import com.ict.expensemanagement.data.entity.SavingsGoal
+import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivitySavingsBinding
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -169,8 +170,10 @@ class SavingsActivity : AppCompatActivity() {
                             if (it.id == goal.id) it.copy(currentAmount = value) else it
                         }
                         saveGoalsToPrefs(updatedGoals)
-                        fetchSavingsData()
-                        dialog.dismiss()
+                        recordGoalAdjustment(goal, value) {
+                            fetchSavingsData()
+                            dialog.dismiss()
+                        }
                     }
                 }
             }
@@ -219,5 +222,31 @@ class SavingsActivity : AppCompatActivity() {
             arr.put(o)
         }
         prefs.edit().putString(goalsKey, arr.toString()).apply()
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun recordGoalAdjustment(goal: SavingsGoal, newAmount: Double, onComplete: () -> Unit) {
+        val previousAmount = goal.currentAmount
+        val delta = newAmount - previousAmount
+        if (delta == 0.0 || userId == null) {
+            onComplete()
+            return
+        }
+
+        val adjustmentType = if (delta > 0) "Goal Deposit" else "Goal Withdrawal"
+        val transaction = Transaction(
+            id = -1,
+            label = "$adjustmentType - ${goal.title}",
+            amount = -delta,
+            description = "Goal adjustment for ${goal.title}",
+            transactionDate = LocalDate.now().toString(),
+            userId = userId!!,
+            code = ""
+        ).apply { setCode() }
+
+        GlobalScope.launch {
+            firebaseRepository.insertTransaction(transaction)
+            runOnUiThread { onComplete() }
+        }
     }
 }
