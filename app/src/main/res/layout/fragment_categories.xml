@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="false"
+    android:isScrollContainer="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center">
+
+        <!-- Income Chart Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Income Sources"
+            android:textColor="@color/darkGray"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"
+            android:gravity="start" />
+
+        <FrameLayout
+            android:layout_width="280dp"
+            android:layout_height="140dp"
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:layout_marginBottom="8dp">
+            
+            <com.github.mikephil.charting.charts.PieChart
+                android:id="@+id/incomeChart"
+                android:layout_width="280dp"
+                android:layout_height="280dp"
+                android:layout_gravity="top|center_horizontal" />
+        </FrameLayout>
+
+        <!-- Income Category Legend -->
+        <LinearLayout
+            android:id="@+id/incomeLegendLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"
+            android:gravity="start">
+        </LinearLayout>
+
+        <!-- Expense Chart Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Expense Categories"
+            android:textColor="@color/darkGray"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"
+            android:gravity="start" />
+
+        <FrameLayout
+            android:layout_width="280dp"
+            android:layout_height="140dp"
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:layout_marginBottom="8dp">
+            
+            <com.github.mikephil.charting.charts.PieChart
+                android:id="@+id/expenseChart"
+                android:layout_width="280dp"
+                android:layout_height="280dp"
+                android:layout_gravity="top|center_horizontal" />
+        </FrameLayout>
+
+        <!-- Expense Category Legend -->
+        <LinearLayout
+            android:id="@+id/expenseLegendLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="32dp"
+            android:gravity="start">
+        </LinearLayout>
+
+        <!-- Transactions List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:nestedScrollingEnabled="true" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

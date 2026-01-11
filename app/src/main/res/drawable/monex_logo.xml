@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Three stacked, offset, slightly slanted parallel lines -->
+    <path
+        android:fillColor="@color/primaryBlue"
+        android:pathData="M8,12 L40,10 L40,14 L8,16 Z"
+        android:rotation="5"
+        android:pivotX="24"
+        android:pivotY="13"/>
+    <path
+        android:fillColor="@color/primaryBlue"
+        android:pathData="M8,20 L40,18 L40,22 L8,24 Z"
+        android:rotation="5"
+        android:pivotX="24"
+        android:pivotY="21"/>
+    <path
+        android:fillColor="@color/primaryBlue"
+        android:pathData="M8,28 L40,26 L40,30 L8,32 Z"
+        android:rotation="5"
+        android:pivotX="24"
+        android:pivotY="29"/>
+</vector>
