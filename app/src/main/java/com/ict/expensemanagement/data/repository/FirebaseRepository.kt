@@ -94,9 +94,17 @@ class FirebaseRepository {
     }
 
     suspend fun insertTransaction(transaction: Transaction): String {
-        val newId = if (transaction.id != -1) transaction.id else generateId()
+        var newId = if (transaction.id != -1) transaction.id else generateId()
+        var nodeRef = transactionsRef.child(newId.toString())
+
+        // Ensure we never overwrite an existing transaction node
+        while (nodeRef.get().await().exists()) {
+            newId = generateId()
+            nodeRef = transactionsRef.child(newId.toString())
+        }
+
         val transactionWithId = transaction.copy(id = newId)
-        transactionsRef.child(newId.toString()).setValue(transactionWithId).await()
+        nodeRef.setValue(transactionWithId).await()
         return newId.toString()
     }
 

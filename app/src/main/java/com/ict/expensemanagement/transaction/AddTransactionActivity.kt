@@ -70,7 +70,6 @@ class AddTransactionActivity : AppCompatActivity() {
             if (userId != null) {
                 transactions = firebaseRepository.getTransactionsByUserId(userId!!)
                     .sortedByDescending { it.transactionDate }
-                    .take(10) // Get latest 10 transactions
 
                 runOnUiThread {
                     transactionAdapter.setData(transactions)

@@ -19,9 +19,6 @@
             android:name=".auth.SignUpActivity"
             android:exported="false" />
         <activity
-            android:name=".stats.StaticActivity"
-            android:exported="false" />
-        <activity
             android:name=".transaction.DetailedActivity"
             android:exported="false" />
         <activity
