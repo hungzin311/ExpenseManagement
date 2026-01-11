@@ -213,9 +213,6 @@ class AddIncomeActivity : AppCompatActivity() {
         val startOffset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - 2
 
         val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-        val currentDay = Calendar.getInstance()
-        val isCurrentMonth = calendar.get(Calendar.YEAR) == currentDay.get(Calendar.YEAR) &&
-                calendar.get(Calendar.MONTH) == currentDay.get(Calendar.MONTH)
 
         // Get previous month's last days for empty cells
         val prevMonth = calendar.clone() as Calendar

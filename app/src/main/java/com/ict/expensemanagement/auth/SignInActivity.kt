@@ -17,7 +17,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.ict.expensemanagement.HomeActivity
 import com.ict.expensemanagement.R
-import com.ict.expensemanagement.auth.SignUpActivity
 import com.ict.expensemanagement.databinding.ActivitySignInBinding
 
 class SignInActivity : AppCompatActivity() {

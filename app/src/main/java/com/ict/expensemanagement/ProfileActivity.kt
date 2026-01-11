@@ -36,7 +36,6 @@ class ProfileActivity : AppCompatActivity() {
         val emailLayout = binding.profileMail
         val moneyLayout = binding.profileMoney
         val logoutBtn = binding.logoutBtn
-        val activity = this
         val bottomNavigationView = binding.bottomNavView
 
         bottomNavigationView.selectedItemId = R.id.item_settings

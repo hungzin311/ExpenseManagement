@@ -36,7 +36,6 @@ class TotalExpensesActivity : AppCompatActivity() {
     private val calendar = Calendar.getInstance()
     private var selectedDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
     private var isDaySelected: Boolean = false
-    private val budgetPrefsName = "budget_prefs"
     private val firebaseRepository = FirebaseRepository()
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -126,10 +125,6 @@ class TotalExpensesActivity : AppCompatActivity() {
         val startOffset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - 2
 
         val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-        val currentDay = Calendar.getInstance()
-        val isCurrentMonth = calendar.get(Calendar.YEAR) == currentDay.get(Calendar.YEAR) &&
-                calendar.get(Calendar.MONTH) == currentDay.get(Calendar.MONTH)
-
         // Previous month trailing days
         val prevMonth = calendar.clone() as Calendar
         prevMonth.add(Calendar.MONTH, -1)
@@ -302,21 +297,5 @@ class TotalExpensesActivity : AppCompatActivity() {
 
         // Display total expense in the circle
         binding.totalSpendAmount.text = "$${String.Companion.format(Locale.US, "%,.2f", netAmount)}"
-
-        // Fetch monthly budget from SharedPreferences
-        val formatterKey = SimpleDateFormat("yyyyMM", Locale.US)
-        val key = "budget_${formatterKey.format(calendar.time)}"
-        val prefs = getSharedPreferences(budgetPrefsName, MODE_PRIVATE)
-        val budget = prefs.getFloat(key, 0f).toDouble()
-
-        val percentage = if (budget > 0) {
-            (totalExpense / budget * 100.0).coerceAtMost(999.0)
-        } else 0.0
-
-        if (budget > 0) {
-            binding.budgetText.text = "You have Spend total\n${String.Companion.format(Locale.US, "%.0f", percentage)}% of your budget"
-        } else {
-            binding.budgetText.text = "Set your budget to track spending %"
-        }
     }
 }

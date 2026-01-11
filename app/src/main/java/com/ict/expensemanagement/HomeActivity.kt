@@ -99,11 +99,6 @@ class HomeActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // Budget Button click - open AddBudgetActivity
-        binding.budgetButton.setOnClickListener {
-            val intent = Intent(this, AddBudgetActivity::class.java)
-            startActivity(intent)
-        }
     }
 
     override fun onStart() {

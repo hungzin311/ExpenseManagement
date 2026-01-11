@@ -2,21 +2,16 @@ package com.ict.expensemanagement.goal
 
 import android.R
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.gridlayout.widget.GridLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.databinding.ActivityAddGoalBinding
-import com.ict.expensemanagement.databinding.DialogCalendarBinding
 import com.ict.expensemanagement.databinding.DialogContributionTypeBinding
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -32,7 +27,6 @@ class AddGoalActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAddGoalBinding
     private lateinit var auth: FirebaseAuth
     private var userId: String? = null
-    private val calendar = Calendar.getInstance()
     private var selectedDeadline: Calendar = Calendar.getInstance()
     private var selectedContributionType: String = "Yearly"
     private var selectedDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
@@ -164,31 +158,6 @@ class AddGoalActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetTextI18n")
-    private fun showCalendarDialog() {
-        val dialogBinding = DialogCalendarBinding.inflate(LayoutInflater.from(this))
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setView(dialogBinding.root)
-            .create()
-
-        val calendarForDialog = selectedDeadline.clone() as Calendar
-        updateCalendarDisplay(dialogBinding, calendarForDialog)
-
-        dialogBinding.prevMonthButton.setOnClickListener {
-            calendarForDialog.add(Calendar.MONTH, -1)
-            updateCalendarDisplay(dialogBinding, calendarForDialog)
-        }
-
-        dialogBinding.nextMonthButton.setOnClickListener {
-            calendarForDialog.add(Calendar.MONTH, 1)
-            updateCalendarDisplay(dialogBinding, calendarForDialog)
-        }
-
-        // Avoid parent scroll interfering inside dialog grid
-        dialogBinding.calendarGrid.setOnTouchListener { _, _ -> true }
-
-        dialog.window?.setBackgroundDrawableResource(R.color.transparent)
-        dialog.show()
-    }
 
     /**
      * Open different picker based on selected contribution type.
@@ -342,104 +311,6 @@ class AddGoalActivity : AppCompatActivity() {
             .show()
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun updateCalendarDisplay(binding: DialogCalendarBinding, calendar: Calendar) {
-        val monthFormat = SimpleDateFormat("MMMM - yyyy", Locale.US)
-        binding.monthYearText.text = monthFormat.format(calendar.time)
-
-        val calendarGrid = binding.calendarGrid
-        calendarGrid.removeAllViews()
-
-        val firstDayOfMonth = calendar.clone() as Calendar
-        firstDayOfMonth.set(Calendar.DAY_OF_MONTH, 1)
-        val firstDayOfWeek = firstDayOfMonth.get(Calendar.DAY_OF_WEEK)
-
-        val startOffset = if (firstDayOfWeek == Calendar.SUNDAY) 6 else firstDayOfWeek - 2
-        val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-
-        // Previous month days
-        val prevMonth = calendar.clone() as Calendar
-        prevMonth.add(Calendar.MONTH, -1)
-        val daysInPrevMonth = prevMonth.getActualMaximum(Calendar.DAY_OF_MONTH)
-
-        for (i in 0 until startOffset) {
-            val dayView = TextView(this)
-            dayView.text = (daysInPrevMonth - startOffset + i + 1).toString()
-            dayView.textSize = 16f
-            dayView.gravity = Gravity.CENTER
-            dayView.setTextColor(ContextCompat.getColor(this, com.ict.expensemanagement.R.color.placeholderGray))
-            dayView.setPadding(12, 12, 12, 12)
-
-            val params = GridLayout.LayoutParams().apply {
-                width = 0
-                height = GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                setMargins(4, 4, 4, 4)
-            }
-            dayView.layoutParams = params
-            calendarGrid.addView(dayView)
-        }
-
-        // Current month days
-        val isSelectedMonth = calendar.get(Calendar.YEAR) == selectedDeadline.get(Calendar.YEAR) &&
-                calendar.get(Calendar.MONTH) == selectedDeadline.get(Calendar.MONTH)
-
-        for (day in 1..daysInMonth) {
-            val dayView = TextView(this)
-            dayView.text = day.toString()
-            dayView.textSize = 16f
-            dayView.gravity = Gravity.CENTER
-            dayView.setPadding(12, 12, 12, 12)
-
-            val params = GridLayout.LayoutParams().apply {
-                width = 0
-                height = GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                setMargins(4, 4, 4, 4)
-            }
-            dayView.layoutParams = params
-
-            val isSelected = day == selectedDay && isSelectedMonth
-            if (isSelected) {
-                dayView.setTextColor(ContextCompat.getColor(this, R.color.white))
-                dayView.setBackgroundResource(com.ict.expensemanagement.R.drawable.login_button_background)
-            } else {
-                dayView.setTextColor(ContextCompat.getColor(this, com.ict.expensemanagement.R.color.darkGray))
-                dayView.background = null
-            }
-
-            dayView.setOnClickListener {
-                selectedDay = day
-                selectedDeadline.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), day)
-                updateDeadlineDisplay()
-                // Dismiss dialog after selection
-                (dayView.parent.parent.parent.parent as? Dialog)?.dismiss()
-            }
-
-            calendarGrid.addView(dayView)
-        }
-
-        // Next month days (fill remaining cells)
-        val remainingCells = 42 - (startOffset + daysInMonth) // 6 rows * 7 columns
-        for (i in 1..remainingCells) {
-            val dayView = TextView(this)
-            dayView.text = i.toString()
-            dayView.textSize = 16f
-            dayView.gravity = Gravity.CENTER
-            dayView.setTextColor(ContextCompat.getColor(this, com.ict.expensemanagement.R.color.placeholderGray))
-            dayView.setPadding(12, 12, 12, 12)
-
-            val params = GridLayout.LayoutParams().apply {
-                width = 0
-                height = GridLayout.LayoutParams.WRAP_CONTENT
-                columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
-                setMargins(4, 4, 4, 4)
-            }
-            dayView.layoutParams = params
-            calendarGrid.addView(dayView)
-        }
-    }
-
     private fun updateDeadlineDisplay() {
         val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US)
         binding.deadlineInput.setText(dateFormat.format(selectedDeadline.time))
@@ -458,8 +329,6 @@ class AddGoalActivity : AppCompatActivity() {
             .replace("$", "")
             .trim()
         val currentAmount = if (currentAmountText.isBlank()) 0.0 else currentAmountText.toDoubleOrNull()
-        val contributionType = binding.contributionTypeInput.text.toString()
-
         when {
             title.isEmpty() -> {
                 binding.goalTitleLayout.error = "Please enter goal title"
