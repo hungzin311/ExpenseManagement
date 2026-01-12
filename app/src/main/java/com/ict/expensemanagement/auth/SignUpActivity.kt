@@ -19,6 +19,7 @@ import com.ict.expensemanagement.databinding.ActivitySignUpBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 
 class SignUpActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySignUpBinding
@@ -62,33 +63,29 @@ class SignUpActivity : AppCompatActivity() {
             if (username.isNotEmpty() && email.isNotEmpty() && pass.isNotEmpty() && confirmPass.isNotEmpty()) {
                 if (pass.equals(confirmPass)) {
                     lifecycleScope.launch {
-                        val usernameExists = withContext(Dispatchers.IO) {
-                            firebaseRepository.checkUsernameExists(username)
-                        }
-                        if (usernameExists) {
-                            Toast.makeText(activity, "Username is already exist", Toast.LENGTH_SHORT).show()
-                            return@launch
-                        }
-                        auth.createUserWithEmailAndPassword(email, pass).addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val authUser = auth.currentUser ?: return@addOnCompleteListener
-                                val uid = authUser.uid
-                                val user = User(uid, username, pass, email, "").apply { setCode() }
-
-                                lifecycleScope.launch {
-                                    try {
-                                        withContext(Dispatchers.IO) {
-                                            firebaseRepository.saveUser(user)
-                                        }
-                                        val intent = Intent(activity, SignInActivity::class.java)
-                                        startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(activity, "Error when save user: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            } else {
-                                Toast.makeText(activity, task.exception?.message ?: "Sign up failed", Toast.LENGTH_SHORT).show()
+                        try {
+                            val usernameExists = withContext(Dispatchers.IO) {
+                                firebaseRepository.checkUsernameExists(username)
                             }
+                            if (usernameExists) {
+                                Toast.makeText(activity, "Username is already exist", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+
+                            val authResult = withContext(Dispatchers.IO) {
+                                auth.createUserWithEmailAndPassword(email, pass).await()
+                            }
+                            val authUser = authResult.user ?: throw IllegalStateException("Cannot retrieve new user")
+                            val uid = authUser.uid
+                            val user = User(uid, username, pass, email, "").apply { setCode() }
+
+                            withContext(Dispatchers.IO) {
+                                firebaseRepository.saveUser(user)
+                            }
+
+                            startActivity(Intent(activity, SignInActivity::class.java))
+                        } catch (e: Exception) {
+                            Toast.makeText(activity, e.message ?: "Sign up failed", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
