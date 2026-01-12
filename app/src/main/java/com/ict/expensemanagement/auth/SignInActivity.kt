@@ -89,7 +89,7 @@ class SignInActivity : AppCompatActivity() {
             }
         }
 
-        // Clear error when user starts typing
+        // Clear error when user starts typing (when clicked --> focus = True)
         binding.emailEt.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
                 clearError()
@@ -102,7 +102,7 @@ class SignInActivity : AppCompatActivity() {
             }
         }
 
-        // Also clear error when text changes
+        // Also clear error when text changes, before and after: no-op
         binding.emailEt.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {

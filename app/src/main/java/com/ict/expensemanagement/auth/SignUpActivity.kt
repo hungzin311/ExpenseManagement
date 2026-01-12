@@ -10,13 +10,15 @@ import android.text.style.ForegroundColorSpan
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.R
 import com.ict.expensemanagement.data.entity.User
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivitySignUpBinding
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SignUpActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySignUpBinding
@@ -59,39 +61,36 @@ class SignUpActivity : AppCompatActivity() {
 
             if (username.isNotEmpty() && email.isNotEmpty() && pass.isNotEmpty() && confirmPass.isNotEmpty()) {
                 if (pass.equals(confirmPass)) {
-                    GlobalScope.launch {
-                        if (firebaseRepository.checkUsernameExists(username)) {
-                            runOnUiThread {
-                                Toast.makeText(activity, "Username is already exist", Toast.LENGTH_SHORT).show()
-                            }
-                        } else {
-                            auth.createUserWithEmailAndPassword(email, pass).addOnCompleteListener{
-                                if (it.isSuccessful) {
-                                    val authUser = auth.currentUser
-                                    val uid = authUser!!.uid
-                                    val user = User(uid, username, pass, email, "")
-                                    user.setCode()
-                                    
-                                    GlobalScope.launch {
-                                        try {
+                    lifecycleScope.launch {
+                        val usernameExists = withContext(Dispatchers.IO) {
+                            firebaseRepository.checkUsernameExists(username)
+                        }
+                        if (usernameExists) {
+                            Toast.makeText(activity, "Username is already exist", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        auth.createUserWithEmailAndPassword(email, pass).addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                val authUser = auth.currentUser ?: return@addOnCompleteListener
+                                val uid = authUser.uid
+                                val user = User(uid, username, pass, email, "").apply { setCode() }
+
+                                lifecycleScope.launch {
+                                    try {
+                                        withContext(Dispatchers.IO) {
                                             firebaseRepository.saveUser(user)
-                                            runOnUiThread {
-                                                val intent = Intent(activity, SignInActivity::class.java)
-                                                startActivity(intent)
-                                            }
-                                        } catch (e: Exception) {
-                                            runOnUiThread {
-                                                Toast.makeText(activity, "Error when save user: ${e.message}", Toast.LENGTH_SHORT).show()
-                                            }
                                         }
+                                        val intent = Intent(activity, SignInActivity::class.java)
+                                        startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(activity, "Error when save user: ${e.message}", Toast.LENGTH_SHORT).show()
                                     }
-                                } else {
-                                    Toast.makeText(activity, it.exception.toString(), Toast.LENGTH_SHORT).show()
                                 }
+                            } else {
+                                Toast.makeText(activity, task.exception?.message ?: "Sign up failed", Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
-
                 } else {
                     Toast.makeText(this, "Password is not matching", Toast.LENGTH_SHORT).show()
                 }

@@ -10,13 +10,15 @@ import android.widget.ImageButton
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.R
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityDetailedBinding
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -153,11 +155,11 @@ class DetailedActivity : AppCompatActivity() {
     }
 
     private fun update(transaction: Transaction) {
-        GlobalScope.launch {
-            firebaseRepository.updateTransaction(transaction)
-            runOnUiThread {
-                finish()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                firebaseRepository.updateTransaction(transaction)
             }
+            finish()
         }
     }
 }

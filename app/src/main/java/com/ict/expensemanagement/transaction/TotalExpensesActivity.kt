@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.gridlayout.widget.GridLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -18,9 +19,9 @@ import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityTotalExpensesBinding
 import com.ict.expensemanagement.stats.CategoriesFragment
 import com.ict.expensemanagement.stats.SpendsFragment
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.Calendar
@@ -38,7 +39,6 @@ class TotalExpensesActivity : AppCompatActivity() {
     private var isDaySelected: Boolean = false
     private val firebaseRepository = FirebaseRepository()
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityTotalExpensesBinding.inflate(layoutInflater)
@@ -239,10 +239,12 @@ class TotalExpensesActivity : AppCompatActivity() {
         }.attach()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun fetchTransactions() {
-        GlobalScope.launch {
-            val allTransactions = firebaseRepository.getTransactionsByUserId(userId!!)
+        val id = userId ?: return
+        lifecycleScope.launch {
+            val allTransactions = withContext(Dispatchers.IO) {
+                firebaseRepository.getTransactionsByUserId(id)
+            }
 
             // Filter transactions: by day if user selected a day, otherwise by month
             val selectedYear = calendar.get(Calendar.YEAR)
@@ -262,17 +264,15 @@ class TotalExpensesActivity : AppCompatActivity() {
                 }
             }.sortedByDescending { it.transactionDate }
 
-            runOnUiThread {
-                updateTotalSpend()
-                // Update SpendsFragment
-                val spendsFragment = viewPagerAdapter.getFragment(0) as? SpendsFragment
-                spendsFragment?.setTransactions(transactions)
-                // Update CategoriesFragment - ensure fragment is created and view is ready
-                binding.viewPager.post {
-                    val categoriesFragment = viewPagerAdapter.getFragment(1) as? CategoriesFragment
-                    if (categoriesFragment != null && categoriesFragment.view != null) {
-                        categoriesFragment.setTransactions(transactions)
-                    }
+            updateTotalSpend()
+            // Update SpendsFragment
+            val spendsFragment = viewPagerAdapter.getFragment(0) as? SpendsFragment
+            spendsFragment?.setTransactions(transactions)
+            // Update CategoriesFragment - ensure fragment is created and view is ready
+            binding.viewPager.post {
+                val categoriesFragment = viewPagerAdapter.getFragment(1) as? CategoriesFragment
+                if (categoriesFragment != null && categoriesFragment.view != null) {
+                    categoriesFragment.setTransactions(transactions)
                 }
             }
         }

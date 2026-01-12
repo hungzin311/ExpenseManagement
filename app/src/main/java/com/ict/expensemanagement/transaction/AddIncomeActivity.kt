@@ -13,6 +13,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.gridlayout.widget.GridLayout
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.R
@@ -21,9 +22,9 @@ import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityAddIncomeBinding
 import com.ict.expensemanagement.databinding.DialogAddCategoryBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -41,7 +42,6 @@ class AddIncomeActivity : AppCompatActivity() {
     private var isExpense: Boolean = false
     private var selectedDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddIncomeBinding.inflate(layoutInflater)
@@ -340,17 +340,14 @@ class AddIncomeActivity : AppCompatActivity() {
         binding.descriptionInput?.setText(selectedCategory)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun loadCategories() {
-        if (userId == null) return
-
-        GlobalScope.launch {
+        val id = userId ?: return
+        lifecycleScope.launch {
             val categoryType = if (isExpense) "Expense" else "Income"
-            val categories = firebaseRepository.getCategoriesByType(userId!!, categoryType)
-
-            runOnUiThread {
-                displayCategories(categories)
+            val categories = withContext(Dispatchers.IO) {
+                firebaseRepository.getCategoriesByType(id, categoryType)
             }
+            displayCategories(categories)
         }
     }
 
@@ -462,25 +459,24 @@ class AddIncomeActivity : AppCompatActivity() {
 
             val categoryType = if (isExpense) "Expense" else "Income"
 
-            GlobalScope.launch {
-                // Check if category already exists
-                val existingCategory = firebaseRepository.getCategoryByName(userId!!, categoryType, categoryName)
+            lifecycleScope.launch {
+                val id = userId ?: return@launch
+                val existingCategory = withContext(Dispatchers.IO) {
+                    firebaseRepository.getCategoryByName(id, categoryType, categoryName)
+                }
                 if (existingCategory != null) {
-                    runOnUiThread {
-                        Toast.makeText(this@AddIncomeActivity, "Category already exists", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(this@AddIncomeActivity, "Category already exists", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
-                // Insert new category
-                val newCategory = Category(0, categoryName, categoryType, userId!!)
-                firebaseRepository.insertCategory(newCategory)
-
-                runOnUiThread {
-                    Toast.makeText(this@AddIncomeActivity, "Category added successfully", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                    loadCategories()
+                val newCategory = Category(0, categoryName, categoryType, id)
+                withContext(Dispatchers.IO) {
+                    firebaseRepository.insertCategory(newCategory)
                 }
+
+                Toast.makeText(this@AddIncomeActivity, "Category added successfully", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+                loadCategories()
             }
         }
 
@@ -503,15 +499,14 @@ class AddIncomeActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun insert(transaction: Transaction) {
-        GlobalScope.launch {
-            firebaseRepository.insertTransaction(transaction)
-
-            runOnUiThread {
-                Toast.makeText(this@AddIncomeActivity, "Transaction added successfully", Toast.LENGTH_SHORT).show()
-                finish()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                firebaseRepository.insertTransaction(transaction)
             }
+
+            Toast.makeText(this@AddIncomeActivity, "Transaction added successfully", Toast.LENGTH_SHORT).show()
+            finish()
         }
     }
 }

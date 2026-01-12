@@ -8,14 +8,15 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.databinding.ActivityAddGoalBinding
 import com.ict.expensemanagement.databinding.DialogContributionTypeBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -31,7 +32,6 @@ class AddGoalActivity : AppCompatActivity() {
     private var selectedContributionType: String = "Yearly"
     private var selectedDay: Int = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddGoalBinding.inflate(layoutInflater)
@@ -361,13 +361,13 @@ class AddGoalActivity : AppCompatActivity() {
                     userId = userId!!
                 )
 
-                GlobalScope.launch {
-                    saveGoalToPrefs(goal)
-                    runOnUiThread {
-                        Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
-                        setResult(RESULT_OK)
-                        finish()
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        saveGoalToPrefs(goal)
                     }
+                    Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK)
+                    finish()
                 }
             }
         }

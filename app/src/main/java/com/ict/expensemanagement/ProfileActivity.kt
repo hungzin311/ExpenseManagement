@@ -5,14 +5,16 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.auth.SignInActivity
 import com.ict.expensemanagement.data.entity.User
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityProfileBinding
 import com.ict.expensemanagement.goal.SavingsActivity
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class ProfileActivity : AppCompatActivity() {
@@ -40,22 +42,24 @@ class ProfileActivity : AppCompatActivity() {
 
         bottomNavigationView.selectedItemId = R.id.item_settings
 
-        GlobalScope.launch {    
-            val fetchedUser = firebaseRepository.getUserById(userId!!)
-            val money = firebaseRepository.getMoneyByUserId(userId!!)
+        lifecycleScope.launch {
+            val id = userId ?: return@launch
+            val (fetchedUser, money) = withContext(Dispatchers.IO) {
+                val userResult = firebaseRepository.getUserById(id)
+                val moneyResult = firebaseRepository.getMoneyByUserId(id)
+                userResult to moneyResult
+            }
 
-            runOnUiThread {
-                if (fetchedUser != null) {
-                    user = fetchedUser
-                    usernameLayout.text = user.username
-                    emailLayout.text = user.email
-                    moneyLayout.text = "${"%, .0f".format(Locale.US, money)} VND"
-                } else {
-                    // Handle case when user is not found
-                    usernameLayout.text = "User not found"
-                    emailLayout.text = ""
-                    moneyLayout.text = "0 VND"
-                }
+            if (fetchedUser != null) {
+                user = fetchedUser
+                usernameLayout.text = user.username
+                emailLayout.text = user.email
+                moneyLayout.text = "${"%, .0f".format(Locale.US, money)} VND"
+            } else {
+                // Handle case when user is not found
+                usernameLayout.text = "User not found"
+                emailLayout.text = ""
+                moneyLayout.text = "0 VND"
             }
         }
 

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
@@ -17,9 +18,9 @@ import com.ict.expensemanagement.goal.SavingsActivity
 import com.ict.expensemanagement.stats.SpendsFragment
 import com.ict.expensemanagement.transaction.AddTransactionActivity
 import com.ict.expensemanagement.transaction.TotalExpensesActivity
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
@@ -72,10 +73,7 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.item_settings -> {
-                    GlobalScope.launch {
-                        val intent = Intent(activity, ProfileActivity::class.java)
-                        startActivity(intent)
-                    }
+                    startActivity(Intent(activity, ProfileActivity::class.java))
                     true
                 }
                 else -> false
@@ -106,10 +104,12 @@ class HomeActivity : AppCompatActivity() {
         // No need to sync anymore, Firebase handles it automatically
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun fetchAll() {
-        GlobalScope.launch {
-            val allTransactions = firebaseRepository.getTransactionsByUserId(userId!!)
+        val id = userId ?: return
+        lifecycleScope.launch {
+            val allTransactions = withContext(Dispatchers.IO) {
+                firebaseRepository.getTransactionsByUserId(id)
+            }
             // Lọc theo tháng hiện tại để đồng bộ với Total Expenses
             val today = java.time.LocalDate.now()
             transactions = allTransactions.filter { tran ->
@@ -121,12 +121,10 @@ class HomeActivity : AppCompatActivity() {
                 }
             }.sortedByDescending { it.transactionDate }
 
-            runOnUiThread {
-                updateDashboard()
-                // Update SpendsFragment
-                val spendsFragment = supportFragmentManager.findFragmentById(R.id.spendsFragmentContainer) as? SpendsFragment
-                spendsFragment?.setTransactions(transactions)
-            }
+            updateDashboard()
+            // Update SpendsFragment
+            val spendsFragment = supportFragmentManager.findFragmentById(R.id.spendsFragmentContainer) as? SpendsFragment
+            spendsFragment?.setTransactions(transactions)
         }
     }
 
@@ -151,14 +149,13 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun undoDelete() {
-        GlobalScope.launch {
-            firebaseRepository.insertTransaction(deletedTransaction)
-            transactions = oldTransactions
-
-            runOnUiThread {
-                transactionAdapter.setData(transactions)
-                updateDashboard()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                firebaseRepository.insertTransaction(deletedTransaction)
             }
+            transactions = oldTransactions
+            transactionAdapter.setData(transactions)
+            updateDashboard()
         }
     }
 
@@ -177,14 +174,14 @@ class HomeActivity : AppCompatActivity() {
         deletedTransaction = transaction
         oldTransactions = transactions
 
-        GlobalScope.launch {
-            firebaseRepository.deleteTransaction(transaction)
-            transactions = transactions.filter {it.id != transaction.id}
-            runOnUiThread {
-                updateDashboard()
-                transactionAdapter.setData(transactions)
-                showSnackbar()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                firebaseRepository.deleteTransaction(transaction)
             }
+            transactions = transactions.filter {it.id != transaction.id}
+            updateDashboard()
+            transactionAdapter.setData(transactions)
+            showSnackbar()
         }
     }
 

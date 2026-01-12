@@ -8,6 +8,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
@@ -17,9 +18,9 @@ import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivitySavingsBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -43,7 +44,6 @@ class SavingsActivity : AppCompatActivity() {
         private const val REQUEST_ADD_GOAL = 1001
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySavingsBinding.inflate(layoutInflater)
@@ -96,11 +96,11 @@ class SavingsActivity : AppCompatActivity() {
         binding.monthYearText.text = monthFormat.format(calendar.time)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun fetchSavingsData() {
-        GlobalScope.launch {
-            if (userId != null) {
-                val transactions = firebaseRepository.getTransactionsByUserId(userId!!)
+        val id = userId ?: return
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val transactions = firebaseRepository.getTransactionsByUserId(id)
                 val today = LocalDate.now()
                 val monthFiltered = transactions.filter { tran ->
                     try {
@@ -112,18 +112,22 @@ class SavingsActivity : AppCompatActivity() {
                 }
                 val totalIncome = monthFiltered.filter { it.amount > 0 }.sumOf { it.amount }
                 val totalExpenses = monthFiltered.filter { it.amount < 0 }.sumOf { abs(it.amount) }
-                currentSavings = totalIncome - totalExpenses
-
-                goals = loadGoalsFromPrefs()
-                val totalTarget = goals.sumOf { it.targetAmount }
-                val totalGoalCurrent = goals.sumOf { it.currentAmount }
-
-                runOnUiThread {
-                    binding.currentSavingsAmount.text = "$${String.Companion.format(Locale.US, "%,.0f", currentSavings)}"
-                    updateGoalTotals(totalGoalCurrent, totalTarget)
-                    goalAdapter.updateGoals(goals)
-                }
+                val savings = totalIncome - totalExpenses
+                val loadedGoals = loadGoalsFromPrefs()
+                val totalTarget = loadedGoals.sumOf { it.targetAmount }
+                val totalGoalCurrent = loadedGoals.sumOf { it.currentAmount }
+                SavingsUiState(
+                    currentSavings = savings,
+                    goals = loadedGoals,
+                    totalGoalCurrent = totalGoalCurrent,
+                    totalTarget = totalTarget
+                )
             }
+            currentSavings = result.currentSavings
+            goals = result.goals
+            binding.currentSavingsAmount.text = "$${String.Companion.format(Locale.US, "%,.0f", currentSavings)}"
+            updateGoalTotals(result.totalGoalCurrent, result.totalTarget)
+            goalAdapter.updateGoals(goals)
         }
     }
 
@@ -224,7 +228,6 @@ class SavingsActivity : AppCompatActivity() {
         prefs.edit().putString(goalsKey, arr.toString()).apply()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun recordGoalAdjustment(goal: SavingsGoal, newAmount: Double, onComplete: () -> Unit) {
         val previousAmount = goal.currentAmount
         val delta = newAmount - previousAmount
@@ -244,9 +247,18 @@ class SavingsActivity : AppCompatActivity() {
             code = ""
         ).apply { setCode() }
 
-        GlobalScope.launch {
-            firebaseRepository.insertTransaction(transaction)
-            runOnUiThread { onComplete() }
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                firebaseRepository.insertTransaction(transaction)
+            }
+            onComplete()
         }
     }
+
+    private data class SavingsUiState(
+        val currentSavings: Double,
+        val goals: List<SavingsGoal>,
+        val totalGoalCurrent: Double,
+        val totalTarget: Double
+    )
 }

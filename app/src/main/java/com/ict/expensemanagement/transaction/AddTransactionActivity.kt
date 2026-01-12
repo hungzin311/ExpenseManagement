@@ -3,15 +3,16 @@ package com.ict.expensemanagement.transaction
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.adapter.TransactionAdapter
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityAddTransactionBinding
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AddTransactionActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAddTransactionBinding
@@ -22,7 +23,6 @@ class AddTransactionActivity : AppCompatActivity() {
     private lateinit var linearLayoutManager: LinearLayoutManager
     private val firebaseRepository = FirebaseRepository()
 
-    @OptIn(DelicateCoroutinesApi::class) 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityAddTransactionBinding.inflate(layoutInflater)
@@ -64,17 +64,15 @@ class AddTransactionActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun fetchLatestTransactions() {
-        GlobalScope.launch {
-            if (userId != null) {
-                transactions = firebaseRepository.getTransactionsByUserId(userId!!)
+        val id = userId ?: return
+        lifecycleScope.launch {
+            val latest = withContext(Dispatchers.IO) {
+                firebaseRepository.getTransactionsByUserId(id)
                     .sortedByDescending { it.transactionDate }
-
-                runOnUiThread {
-                    transactionAdapter.setData(transactions)
-                }
             }
+            transactions = latest
+            transactionAdapter.setData(transactions)
         }
     }
 }
