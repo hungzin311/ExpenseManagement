@@ -2,6 +2,7 @@ package com.ict.expensemanagement.data.repository
 
 import com.google.firebase.database.FirebaseDatabase
 import com.ict.expensemanagement.data.entity.Category
+import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.entity.User
 import kotlinx.coroutines.tasks.await
@@ -13,6 +14,7 @@ class FirebaseRepository {
     private val usersRef = database.child("users")
     private val transactionsRef = database.child("transactions")
     private val categoriesRef = database.child("categories")
+    private val goalsRef = database.child("goals")
 
     private fun generateId(): Int = (System.currentTimeMillis() % Int.MAX_VALUE).toInt()
 
@@ -176,5 +178,39 @@ class FirebaseRepository {
     suspend fun updateCategory(category: Category) {
         if (category.id == 0) return
         categoriesRef.child(category.id.toString()).setValue(category).await()
+    }
+
+    // ========== SAVINGS GOAL OPERATIONS ==========
+    suspend fun getGoalsByUserId(userId: String): List<SavingsGoal> = try {
+        val snapshot = goalsRef.get().await()
+        snapshot.children
+            .mapNotNull { it.getValue(SavingsGoal::class.java) }
+            .filter { it.userId == userId }
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    suspend fun insertGoal(goal: SavingsGoal): Int {
+        var newId = if (goal.id != 0) goal.id else generateId()
+        var nodeRef = goalsRef.child(newId.toString())
+
+        while (nodeRef.get().await().exists()) {
+            newId = generateId()
+            nodeRef = goalsRef.child(newId.toString())
+        }
+
+        val goalWithId = goal.copy(id = newId)
+        nodeRef.setValue(goalWithId).await()
+        return newId
+    }
+
+    suspend fun updateGoal(goal: SavingsGoal) {
+        if (goal.id == 0) return
+        goalsRef.child(goal.id.toString()).setValue(goal).await()
+    }
+
+    suspend fun deleteGoal(goalId: Int) {
+        if (goalId == 0) return
+        goalsRef.child(goalId.toString()).removeValue().await()
     }
 }

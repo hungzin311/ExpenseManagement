@@ -283,14 +283,12 @@ class TotalExpensesActivity : AppCompatActivity() {
         // Calculate total expenses (amount < 0)
         val totalExpense = transactions
             .filter { it.amount < 0 }
-            .map { abs(it.amount) }
-            .sum()
+            .sumOf { abs(it.amount) }
 
         // Calculate total income (amount > 0)
         val totalIncome = transactions
             .filter { it.amount > 0 }
-            .map { it.amount }
-            .sum()
+            .sumOf { abs(it.amount) }
 
         // Net = income - expense (what user expects as overall balance in period)
         val netAmount = totalIncome - totalExpense

@@ -21,8 +21,6 @@ import com.ict.expensemanagement.databinding.ActivitySavingsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.Calendar
@@ -36,8 +34,6 @@ class SavingsActivity : AppCompatActivity() {
     private lateinit var goalAdapter: GoalAdapter
     private var currentSavings: Double = 0.0
     private var goals: List<SavingsGoal> = emptyList()
-    private val goalsPrefsName = "goals_prefs"
-    private val goalsKey = "goals_list"
     private val firebaseRepository = FirebaseRepository()
 
     companion object {
@@ -113,7 +109,7 @@ class SavingsActivity : AppCompatActivity() {
                 val totalIncome = monthFiltered.filter { it.amount > 0 }.sumOf { it.amount }
                 val totalExpenses = monthFiltered.filter { it.amount < 0 }.sumOf { abs(it.amount) }
                 val savings = totalIncome - totalExpenses
-                val loadedGoals = loadGoalsFromPrefs()
+                val loadedGoals = firebaseRepository.getGoalsByUserId(id)
                 val totalTarget = loadedGoals.sumOf { it.targetAmount }
                 val totalGoalCurrent = loadedGoals.sumOf { it.currentAmount }
                 SavingsUiState(
@@ -170,62 +166,25 @@ class SavingsActivity : AppCompatActivity() {
                         Toast.makeText(this, "Current amount cannot exceed target", Toast.LENGTH_SHORT).show()
                     }
                     else -> {
-                        val updatedGoals = goals.map {
-                            if (it.id == goal.id) it.copy(currentAmount = value) else it
-                        }
-                        saveGoalsToPrefs(updatedGoals)
-                        recordGoalAdjustment(goal, value) {
-                            fetchSavingsData()
-                            dialog.dismiss()
+                        val updatedGoal = goal.copy(currentAmount = value)
+                        lifecycleScope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    firebaseRepository.updateGoal(updatedGoal)
+                                }
+                                recordGoalAdjustment(goal, value) {
+                                    fetchSavingsData()
+                                    dialog.dismiss()
+                                }
+                            } catch (e: Exception) {
+                                Toast.makeText(this@SavingsActivity, "Failed to update goal: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 }
             }
             .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
-    }
-
-    // ---- Persistence helpers ----
-    private fun loadGoalsFromPrefs(): List<SavingsGoal> {
-        val prefs = getSharedPreferences(goalsPrefsName, MODE_PRIVATE)
-        val json = prefs.getString(goalsKey, null) ?: return emptyList()
-        return try {
-            val arr = JSONArray(json)
-            val list = mutableListOf<SavingsGoal>()
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                list.add(
-                    SavingsGoal(
-                        id = o.optInt("id", 0),
-                        title = o.optString("title", ""),
-                        targetAmount = o.optDouble("targetAmount", 0.0),
-                        currentAmount = o.optDouble("currentAmount", 0.0),
-                        iconResId = o.optInt("iconResId", R.drawable.ic_box),
-                        userId = o.optString("userId", "")
-                    )
-                )
-            }
-            list
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    private fun saveGoalsToPrefs(list: List<SavingsGoal>) {
-        val prefs = getSharedPreferences(goalsPrefsName, MODE_PRIVATE)
-        val arr = JSONArray()
-        list.forEach { goal ->
-            val o = JSONObject().apply {
-                put("id", goal.id)
-                put("title", goal.title)
-                put("targetAmount", goal.targetAmount)
-                put("currentAmount", goal.currentAmount)
-                put("iconResId", goal.iconResId)
-                put("userId", goal.userId)
-            }
-            arr.put(o)
-        }
-        prefs.edit().putString(goalsKey, arr.toString()).apply()
     }
 
     private fun recordGoalAdjustment(goal: SavingsGoal, newAmount: Double, onComplete: () -> Unit) {

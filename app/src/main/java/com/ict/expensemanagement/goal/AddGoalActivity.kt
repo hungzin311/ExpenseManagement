@@ -12,13 +12,12 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.data.entity.SavingsGoal
+import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityAddGoalBinding
 import com.ict.expensemanagement.databinding.DialogContributionTypeBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -27,6 +26,7 @@ import kotlin.math.min
 class AddGoalActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAddGoalBinding
     private lateinit var auth: FirebaseAuth
+    private val firebaseRepository = FirebaseRepository()
     private var userId: String? = null
     private var selectedDeadline: Calendar = Calendar.getInstance()
     private var selectedContributionType: String = "Yearly"
@@ -316,7 +316,6 @@ class AddGoalActivity : AppCompatActivity() {
         binding.deadlineInput.setText(dateFormat.format(selectedDeadline.time))
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private fun saveGoal() {
         val title = binding.goalTitleInput.text.toString().trim()
         val amountText = binding.amountInput.text.toString()
@@ -362,30 +361,18 @@ class AddGoalActivity : AppCompatActivity() {
                 )
 
                 lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
-                        saveGoalToPrefs(goal)
+                    try {
+                        withContext(Dispatchers.IO) {
+                            firebaseRepository.insertGoal(goal)
+                        }
+                        Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
+                        setResult(RESULT_OK)
+                        finish()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@AddGoalActivity, "Failed to add goal: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
-                    setResult(RESULT_OK)
-                    finish()
                 }
             }
         }
-    }
-
-    private fun saveGoalToPrefs(goal: SavingsGoal) {
-        val prefs = getSharedPreferences("goals_prefs", MODE_PRIVATE)
-        val json = prefs.getString("goals_list", null)
-        val arr = if (json != null) JSONArray(json) else JSONArray()
-        val obj = JSONObject().apply {
-            put("id", (System.currentTimeMillis() % Int.MAX_VALUE).toInt())
-            put("title", goal.title)
-            put("targetAmount", goal.targetAmount)
-            put("currentAmount", goal.currentAmount)
-            put("iconResId", goal.iconResId)
-            put("userId", goal.userId)
-        }
-        arr.put(obj)
-        prefs.edit().putString("goals_list", arr.toString()).apply()
     }
 }

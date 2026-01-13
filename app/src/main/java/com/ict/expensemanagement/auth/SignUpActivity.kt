@@ -65,15 +65,17 @@ class SignUpActivity : AppCompatActivity() {
                     lifecycleScope.launch {
                         try {
                             val usernameExists = withContext(Dispatchers.IO) {
+                                // Change to IO thread to call firebase
                                 firebaseRepository.checkUsernameExists(username)
                             }
                             if (usernameExists) {
                                 Toast.makeText(activity, "Username is already exist", Toast.LENGTH_SHORT).show()
-                                return@launch
+                                return@launch // Exit coroutine
                             }
 
                             val authResult = withContext(Dispatchers.IO) {
                                 auth.createUserWithEmailAndPassword(email, pass).await()
+                                // await() --> waiting firebase return
                             }
                             val authUser = authResult.user ?: throw IllegalStateException("Cannot retrieve new user")
                             val uid = authUser.uid
