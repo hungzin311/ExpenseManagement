@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.mikephil.charting.charts.PieChart
@@ -34,30 +35,30 @@ class CategoriesFragment : Fragment() {
 
     // Color palette for Income chart - Green/Blue tones (money coming in)
     private val incomeColors = listOf(
-        Color.parseColor("#10B981"), // Emerald green
-        Color.parseColor("#3B82F6"), // Blue
-        Color.parseColor("#06B6D4"), // Cyan
-        Color.parseColor("#8B5CF6"), // Purple
-        Color.parseColor("#6366F1"), // Indigo
-        Color.parseColor("#14B8A6"), // Teal
-        Color.parseColor("#0EA5E9"), // Sky blue
-        Color.parseColor("#22C55E"), // Green
-        Color.parseColor("#06B6D4"), // Cyan
-        Color.parseColor("#3B82F6")  // Blue
+        "#10B981".toColorInt(), // Emerald
+        "#22C55E".toColorInt(), // Green
+        "#14B8A6".toColorInt(), // Teal
+        "#06B6D4".toColorInt(), // Cyan
+        "#0EA5E9".toColorInt(), // Sky blue
+        "#3B82F6".toColorInt(), // Blue
+        "#6366F1".toColorInt(), // Indigo
+        "#8B5CF6".toColorInt(), // Purple
+        "#84CC16".toColorInt(), // Lime
+        "#2DD4BF".toColorInt()  // Light teal
     )
 
     // Color palette for Expense chart - Red/Orange tones (money going out)
     private val expenseColors = listOf(
-        Color.parseColor("#EF4444"), // Red
-        Color.parseColor("#F97316"), // Orange
-        Color.parseColor("#F59E0B"), // Amber
-        Color.parseColor("#EC4899"), // Pink
-        Color.parseColor("#DC2626"), // Dark red
-        Color.parseColor("#EA580C"), // Dark orange
-        Color.parseColor("#F43F5E"), // Rose
-        Color.parseColor("#FB7185"), // Light pink
-        Color.parseColor("#FDBA74"), // Light orange
-        Color.parseColor("#F87171")  // Light red
+        "#DC2626".toColorInt(), // Dark red
+        "#EF4444".toColorInt(), // Red
+        "#F87171".toColorInt(), // Light red
+        "#F43F5E".toColorInt(), // Rose
+        "#EC4899".toColorInt(), // Pink
+        "#F97316".toColorInt(), // Orange
+        "#EA580C".toColorInt(), // Dark orange
+        "#F59E0B".toColorInt(), // Amber
+        "#FDBA74".toColorInt(), // Light orange
+        "#FB7185".toColorInt()  // Soft pink
     )
 
     override fun onCreateView(
