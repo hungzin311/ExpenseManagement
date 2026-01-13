@@ -37,7 +37,7 @@ Project sử dụng kiến trúc **Repository Pattern** kết hợp với **Acti
 │      Data Layer                         │
 │  - Firebase Realtime Database           │
 │  - Firebase Authentication              │
-│  - SharedPreferences (cho Goals)        │
+│  - (Toàn bộ dữ liệu: users, transactions, categories, goals) │
 └─────────────────────────────────────────┘
 ```
 
@@ -202,20 +202,22 @@ data class Transaction(
 - **Serializable**: Có thể pass qua Intent
 - **Default values**: Giảm boilerplate code
 
-#### 2.8. SharedPreferences cho Local Storage
+#### 2.8. Đồng bộ Savings Goals với Firebase
 ```kotlin
-// Lưu Goals vào SharedPreferences
-private fun saveGoalsToPrefs(list: List<SavingsGoal>) {
-    val prefs = getSharedPreferences(goalsPrefsName, MODE_PRIVATE)
-    val json = JSONArray()
-    // Convert to JSON và lưu
-    prefs.edit().putString(goalsKey, json.toString()).apply()
+// Repository: ghi/xoá Goal trực tiếp trên Realtime Database
+suspend fun insertGoal(goal: SavingsGoal): Int { ... }
+suspend fun updateGoal(goal: SavingsGoal) { ... }
+suspend fun deleteGoal(goalId: Int) { ... }
+
+// HomeActivity: khi xoá transaction điều chỉnh Goal -> cập nhật lại currentAmount
+if (isGoalAdjustmentTransaction(transaction)) {
+    updateGoalCurrentAmountForTransaction(transaction, revertAdjustment = true)
 }
 ```
 
 **Sử dụng:**
-- Lưu trữ Goals (Savings Goals) local
-- Không cần sync với Firebase cho dữ liệu nhỏ
+- Goals được lưu trên Firebase, mọi thiết bị đều đồng bộ tức thời.
+- Hỗ trợ **add / update / delete** mục tiêu và tự động cân bằng `currentAmount` khi thao tác xoá transaction điều chỉnh.
 
 ---
 
@@ -333,27 +335,25 @@ Activity Lifecycle
 ```
 SavingsActivity
     │
-    ├─ onCreate() → loadGoalsFromPrefs() (SharedPreferences)
-    │
-    ├─ fetchSavingsData()
-    │   ├─ Tính currentSavings = totalIncome - totalExpenses (tháng hiện tại)
-    │   ├─ Load Goals từ SharedPreferences
-    │   └─ Update UI (Progress bars, Totals)
+    ├─ onCreate() → fetchSavingsData()
+    │                ├─ Tính currentSavings = income - expense (tháng hiện tại)
+    │                ├─ Load Goals từ FirebaseRepository.getGoalsByUserId()
+    │                └─ Update UI (Progress, Totals, RecyclerView)
     │
     ├─[Add Goal FAB]─→ AddGoalActivity
-    │                   └─[Save]─→ Save to SharedPreferences
+    │                   └─[Save]─→ FirebaseRepository.insertGoal()
     │                              └─ onActivityResult() → Refresh
     │
     └─[Click Goal]─→ Edit Dialog
                       └─[Update Amount]─→ recordGoalAdjustment()
-                                          └─ Tạo Transaction mới (Goal Deposit/Withdrawal)
-                                             └─ Save to Firebase
+                                          ├─ Tạo transaction mới (Goal Deposit/Withdrawal)
+                                          └─ Đồng bộ currentAmount + log transaction vào Firebase
 ```
 
 **Đặc điểm:**
-- Goals lưu local (SharedPreferences)
-- Mỗi khi adjust goal → Tạo transaction tương ứng trong Firebase
-- Tính toán savings từ transactions tháng hiện tại
+- Goals được đồng bộ hoàn toàn trên Firebase Realtime Database.
+- Xoá transaction điều chỉnh từ HomeActivity sẽ tự hoàn tác `currentAmount` của goal liên quan.
+- Tính toán savings vẫn dựa trên transactions tháng hiện tại.
 
 ---
 

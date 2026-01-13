@@ -6,8 +6,6 @@ import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.entity.User
 import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.util.Calendar
 
 class FirebaseRepository {
     private val database = FirebaseDatabase.getInstance().reference
@@ -30,9 +28,9 @@ class FirebaseRepository {
         usersRef.child(user.id).setValue(user).await()
     }
 
-    suspend fun updateUser(user: User) {
-        usersRef.child(user.id).setValue(user).await()
-    }
+//    suspend fun updateUser(user: User) {
+//        usersRef.child(user.id).setValue(user).await()
+//    }
 
     suspend fun getMoneyByUserId(userId: String): Double = try {
         val snapshot = transactionsRef.get().await()
@@ -51,12 +49,6 @@ class FirebaseRepository {
     }
 
     // ========== TRANSACTION OPERATIONS ==========
-    suspend fun getAllTransactions(): List<Transaction> = try {
-        val snapshot = transactionsRef.get().await()
-        snapshot.children.mapNotNull { it.getValue(Transaction::class.java) }
-    } catch (_: Exception) {
-        emptyList()
-    }
 
     suspend fun getTransactionsByUserId(userId: String): List<Transaction> = try {
         val snapshot = transactionsRef.get().await()
@@ -65,34 +57,6 @@ class FirebaseRepository {
             .filter { it.userId == userId }
     } catch (_: Exception) {
         emptyList()
-    }
-
-    suspend fun getTransactionsByDate(date: String, userId: String): List<Transaction> {
-        return getTransactionsByUserId(userId).filter { it.transactionDate == date }
-    }
-
-    suspend fun getTransactionsByWeek(year: String, week: String, userId: String): List<Transaction> {
-        val weekInt = week.toIntOrNull() ?: return emptyList()
-        val yearInt = year.toIntOrNull() ?: return emptyList()
-        val calendar = Calendar.getInstance().apply {
-            firstDayOfWeek = Calendar.MONDAY
-            minimalDaysInFirstWeek = 4
-            set(Calendar.YEAR, yearInt)
-            set(Calendar.WEEK_OF_YEAR, weekInt)
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        }
-        val startOfWeek = LocalDate.of(
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH) + 1,
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-        val datesInWeek = (0..6).map { startOfWeek.plusDays(it.toLong()).toString() }.toSet()
-        return getTransactionsByUserId(userId).filter { it.transactionDate in datesInWeek }
-    }
-
-    suspend fun getTransactionsByMonth(year: String, month: String, userId: String): List<Transaction> {
-        val prefix = "$year-$month"
-        return getTransactionsByUserId(userId).filter { it.transactionDate.startsWith(prefix) }
     }
 
     suspend fun insertTransaction(transaction: Transaction): String {
@@ -128,13 +92,6 @@ class FirebaseRepository {
         transactionsRef.child(nodeId).setValue(transaction).await()
     }
 
-    suspend fun getTransactionWithLargestId(): Transaction? = try {
-        val snapshot = transactionsRef.orderByChild("id").limitToLast(1).get().await()
-        snapshot.children.firstOrNull()?.getValue(Transaction::class.java)
-    } catch (_: Exception) {
-        null
-    }
-
     private suspend fun findTransactionNodeByCode(userId: String, code: String): String? = try {
         val snapshot = transactionsRef.get().await()
         snapshot.children.firstOrNull {
@@ -168,16 +125,6 @@ class FirebaseRepository {
         val categoryWithId = category.copy(id = newId)
         categoriesRef.child(newId.toString()).setValue(categoryWithId).await()
         return newId.toString()
-    }
-
-    suspend fun deleteCategory(category: Category) {
-        if (category.id == 0) return
-        categoriesRef.child(category.id.toString()).removeValue().await()
-    }
-
-    suspend fun updateCategory(category: Category) {
-        if (category.id == 0) return
-        categoriesRef.child(category.id.toString()).setValue(category).await()
     }
 
     // ========== SAVINGS GOAL OPERATIONS ==========

@@ -183,6 +183,37 @@ class SavingsActivity : AppCompatActivity() {
                     }
                 }
             }
+            .setNeutralButton("Delete") { dialog, _ ->
+                dialog.dismiss()
+                showDeleteGoalConfirmation(goal)
+            }
+            .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+    private fun showDeleteGoalConfirmation(goal: SavingsGoal) {
+        if (goal.id == 0) {
+            Toast.makeText(this, "Goal not synced yet", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Delete goal")
+            .setMessage("Are you sure you want to delete \"${goal.title}\"?")
+            .setPositiveButton("Delete") { dialog, _ ->
+                lifecycleScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            firebaseRepository.deleteGoal(goal.id)
+                        }
+                        Toast.makeText(this@SavingsActivity, "Goal deleted", Toast.LENGTH_SHORT).show()
+                        fetchSavingsData()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@SavingsActivity, "Failed to delete goal: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                dialog.dismiss()
+            }
             .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
     }
