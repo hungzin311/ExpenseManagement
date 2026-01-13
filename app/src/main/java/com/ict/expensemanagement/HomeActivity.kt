@@ -143,14 +143,14 @@ class HomeActivity : AppCompatActivity(), SpendsFragment.TransactionActionListen
     private fun undoDelete() {
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-            firebaseRepository.insertTransaction(deletedTransaction)
+                firebaseRepository.insertTransaction(deletedTransaction)
             }
             if (isGoalAdjustmentTransaction(deletedTransaction)) {
                 updateGoalCurrentAmountForTransaction(deletedTransaction, revertAdjustment = false)
             }
             transactions = oldTransactions
             updateSpendsFragment()
-                updateDashboard()
+            updateDashboard()
         }
     }
 
@@ -171,16 +171,16 @@ class HomeActivity : AppCompatActivity(), SpendsFragment.TransactionActionListen
 
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-            firebaseRepository.deleteTransaction(transaction)
+                firebaseRepository.deleteTransaction(transaction)
             }
             if (isGoalAdjustmentTransaction(transaction)) {
                 updateGoalCurrentAmountForTransaction(transaction, revertAdjustment = true)
             }
             transactions = transactions.filter {it.id != transaction.id}
-                updateDashboard()
+            updateDashboard()
             updateSpendsFragment()
-                showSnackbar()
-            }
+            showSnackbar()
+        }
     }
 
     override fun onDeleteTransaction(transaction: Transaction) {
