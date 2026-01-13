@@ -1,14 +1,14 @@
 {
   "project_info": {
-    "project_number": "891891665366",
-    "firebase_url": "https://expensemanagement-f8aff-93ef8-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "expensemanagement-f8aff-93ef8",
-    "storage_bucket": "expensemanagement-f8aff-93ef8.firebasestorage.app"
+    "project_number": "258891729846",
+    "firebase_url": "https://expensemanagement-94f79-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "expensemanagement-94f79",
+    "storage_bucket": "expensemanagement-94f79.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:891891665366:android:6c144f84a47c35e6a13c77",
+        "mobilesdk_app_id": "1:258891729846:android:e62497633ef4c106790f17",
         "android_client_info": {
           "package_name": "com.ict.expensemanagement"
         }
@@ -16,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCfBYUTIYvvetLBGIuObwjG8CD5avrBpx4"
+          "current_key": "AIzaSyD-ZdnS5crf8dCn2K9jq-dhm8k8zlCBDgc"
         }
       ],
       "services": {

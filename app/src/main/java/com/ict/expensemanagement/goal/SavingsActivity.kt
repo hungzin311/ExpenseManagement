@@ -234,7 +234,8 @@ class SavingsActivity : AppCompatActivity() {
             description = "Goal adjustment for ${goal.title}",
             transactionDate = LocalDate.now().toString(),
             userId = userId!!,
-            code = ""
+            code = "",
+            linkedGoalId = goal.id
         ).apply { setCode() }
 
         lifecycleScope.launch {

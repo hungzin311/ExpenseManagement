@@ -203,10 +203,14 @@ class HomeActivity : AppCompatActivity(), SpendsFragment.TransactionActionListen
     ) {
         if (!isGoalAdjustmentTransaction(transaction)) return
         val id = userId ?: return
-        val goalTitle = transaction.label.substringAfter(" - ", "").trim()
-        if (goalTitle.isEmpty()) return
         val goal = withContext(Dispatchers.IO) {
-            firebaseRepository.getGoalByTitle(id, goalTitle)
+            when {
+                transaction.linkedGoalId != null -> firebaseRepository.getGoalById(transaction.linkedGoalId)
+                else -> {
+                    val goalTitle = transaction.label.substringAfter(" - ", "").trim()
+                    if (goalTitle.isEmpty()) null else firebaseRepository.getGoalByTitle(id, goalTitle)
+                }
+            }
         } ?: return
         val delta = if (revertAdjustment) transaction.amount else -transaction.amount
         val newAmount = (goal.currentAmount + delta).coerceIn(0.0, goal.targetAmount)

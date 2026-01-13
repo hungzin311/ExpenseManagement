@@ -9,9 +9,10 @@ data class Transaction(
     val description: String? = null,
     val transactionDate: String = "",
     val userId: String = "",
-    var code: String = ""
+    var code: String = "",
+    val linkedGoalId: Int? = null
 ) : Serializable {
-    constructor() : this(-1, "", 0.0, "", "", "", "")
+    constructor() : this(-1, "", 0.0, "", "", "", "", null)
 
     fun setCode(){
         this.code =  "${this.label},${this.amount},${this.description},${this.transactionDate}"

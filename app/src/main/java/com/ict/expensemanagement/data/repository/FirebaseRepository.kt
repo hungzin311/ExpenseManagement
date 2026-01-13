@@ -1,6 +1,7 @@
 package com.ict.expensemanagement.data.repository
 
 import com.google.firebase.database.FirebaseDatabase
+import com.ict.expensemanagement.BuildConfig
 import com.ict.expensemanagement.data.entity.Category
 import com.ict.expensemanagement.data.entity.SavingsGoal
 import com.ict.expensemanagement.data.entity.Transaction
@@ -8,7 +9,7 @@ import com.ict.expensemanagement.data.entity.User
 import kotlinx.coroutines.tasks.await
 
 class FirebaseRepository {
-    private val database = FirebaseDatabase.getInstance().reference
+    private val database = FirebaseDatabase.getInstance(BuildConfig.FIREBASE_DB_URL).reference
     private val usersRef = database.child("users")
     private val transactionsRef = database.child("transactions")
     private val categoriesRef = database.child("categories")
@@ -135,6 +136,12 @@ class FirebaseRepository {
             .filter { it.userId == userId }
     } catch (_: Exception) {
         emptyList()
+    }
+
+    suspend fun getGoalById(goalId: Int): SavingsGoal? = try {
+        goalsRef.child(goalId.toString()).get().await().getValue(SavingsGoal::class.java)
+    } catch (_: Exception) {
+        null
     }
 
     suspend fun insertGoal(goal: SavingsGoal): Int {

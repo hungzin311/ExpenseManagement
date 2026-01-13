@@ -18,6 +18,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "FIREBASE_DB_URL",
+            "\"https://expensemanagement-94f79-default-rtdb.asia-southeast1.firebasedatabase.app\""
+        )
     }
 
     buildTypes {
@@ -39,6 +44,7 @@ android {
     buildFeatures {
         dataBinding = true
         viewBinding = true
+        buildConfig = true
     }
 }
 

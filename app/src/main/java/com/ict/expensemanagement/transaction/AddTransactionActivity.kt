@@ -36,6 +36,11 @@ class AddTransactionActivity : AppCompatActivity() {
         fetchLatestTransactions()
     }
 
+    override fun onResume() {
+        super.onResume()
+        fetchLatestTransactions()
+    }
+
     private fun setupRecyclerView() {
         transactions = emptyList()
         transactionAdapter = TransactionAdapter(transactions)
@@ -43,7 +48,7 @@ class AddTransactionActivity : AppCompatActivity() {
 
         binding.recyclerview.adapter = transactionAdapter
         binding.recyclerview.layoutManager = linearLayoutManager
-        binding.recyclerview.setHasFixedSize(true)
+        binding.recyclerview.setHasFixedSize(false)
     }
 
     private fun setupClickListeners() {
