@@ -50,16 +50,16 @@ class ProfileActivity : AppCompatActivity() {
                 userResult to moneyResult
             }
 
-            if (fetchedUser != null) {
-                user = fetchedUser
-                usernameLayout.text = user.username
-                emailLayout.text = user.email
-                moneyLayout.text = "${"%, .0f".format(Locale.US, money)} VND"
-            } else {
-                // Handle case when user is not found
-                usernameLayout.text = "User not found"
-                emailLayout.text = ""
-                moneyLayout.text = "0 VND"
+                if (fetchedUser != null) {
+                    user = fetchedUser
+                    usernameLayout.text = user.username
+                    emailLayout.text = user.email
+                    moneyLayout.text = "${"%, .0f".format(Locale.US, money)} VND"
+                } else {
+                    // Handle case when user is not found
+                    usernameLayout.text = "User not found"
+                    emailLayout.text = ""
+                    moneyLayout.text = "0 VND"
             }
         }
 

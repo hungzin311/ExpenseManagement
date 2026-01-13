@@ -7,10 +7,8 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
-import com.ict.expensemanagement.adapter.TransactionAdapter
 import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityHomeBinding
@@ -23,12 +21,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : AppCompatActivity(), SpendsFragment.TransactionActionListener {
     private lateinit var deletedTransaction : Transaction
     private lateinit var transactions: List<Transaction>
     private lateinit var oldTransactions: List<Transaction>
-    private lateinit var transactionAdapter: TransactionAdapter
-    private lateinit var linearLayoutManager: LinearLayoutManager
     private val firebaseRepository = FirebaseRepository()
     private lateinit var binding: ActivityHomeBinding
     private lateinit var auth: FirebaseAuth
@@ -45,8 +41,6 @@ class HomeActivity : AppCompatActivity() {
         userId = auth.currentUser?.uid
         setContentView(view)
         transactions = arrayListOf()
-        transactionAdapter = TransactionAdapter(transactions)
-        linearLayoutManager = LinearLayoutManager(this)
         
         // Setup Spends Fragment
         if (savedInstanceState == null) {
@@ -122,9 +116,7 @@ class HomeActivity : AppCompatActivity() {
             }.sortedByDescending { it.transactionDate }
 
             updateDashboard()
-            // Update SpendsFragment
-            val spendsFragment = supportFragmentManager.findFragmentById(R.id.spendsFragmentContainer) as? SpendsFragment
-            spendsFragment?.setTransactions(transactions)
+            updateSpendsFragment()
         }
     }
 
@@ -153,8 +145,11 @@ class HomeActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) {
                 firebaseRepository.insertTransaction(deletedTransaction)
             }
+            if (isGoalAdjustmentTransaction(deletedTransaction)) {
+                updateGoalCurrentAmountForTransaction(deletedTransaction, revertAdjustment = false)
+            }
             transactions = oldTransactions
-            transactionAdapter.setData(transactions)
+            updateSpendsFragment()
             updateDashboard()
         }
     }
@@ -178,10 +173,45 @@ class HomeActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) {
                 firebaseRepository.deleteTransaction(transaction)
             }
+            if (isGoalAdjustmentTransaction(transaction)) {
+                updateGoalCurrentAmountForTransaction(transaction, revertAdjustment = true)
+            }
             transactions = transactions.filter {it.id != transaction.id}
             updateDashboard()
-            transactionAdapter.setData(transactions)
+            updateSpendsFragment()
             showSnackbar()
+        }
+    }
+
+    override fun onDeleteTransaction(transaction: Transaction) {
+        deleteTransaction(transaction)
+    }
+
+    private fun updateSpendsFragment() {
+        val spendsFragment = supportFragmentManager.findFragmentById(R.id.spendsFragmentContainer) as? SpendsFragment
+        spendsFragment?.setTransactions(transactions)
+    }
+
+    private fun isGoalAdjustmentTransaction(transaction: Transaction): Boolean {
+        val normalizedLabel = transaction.label.lowercase(Locale.US)
+        return normalizedLabel.startsWith("goal deposit - ") || normalizedLabel.startsWith("goal withdrawal - ")
+    }
+
+    private suspend fun updateGoalCurrentAmountForTransaction(
+        transaction: Transaction,
+        revertAdjustment: Boolean
+    ) {
+        if (!isGoalAdjustmentTransaction(transaction)) return
+        val id = userId ?: return
+        val goalTitle = transaction.label.substringAfter(" - ", "").trim()
+        if (goalTitle.isEmpty()) return
+        val goal = withContext(Dispatchers.IO) {
+            firebaseRepository.getGoalByTitle(id, goalTitle)
+        } ?: return
+        val delta = if (revertAdjustment) transaction.amount else -transaction.amount
+        val newAmount = (goal.currentAmount + delta).coerceIn(0.0, goal.targetAmount)
+        withContext(Dispatchers.IO) {
+            firebaseRepository.updateGoal(goal.copy(currentAmount = newAmount))
         }
     }
 

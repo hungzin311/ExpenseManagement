@@ -213,4 +213,13 @@ class FirebaseRepository {
         if (goalId == 0) return
         goalsRef.child(goalId.toString()).removeValue().await()
     }
+
+    suspend fun getGoalByTitle(userId: String, title: String): SavingsGoal? = try {
+        val snapshot = goalsRef.orderByChild("title").equalTo(title).get().await()
+        snapshot.children
+            .mapNotNull { it.getValue(SavingsGoal::class.java) }
+            .firstOrNull { it.userId == userId }
+    } catch (_: Exception) {
+        null
+    }
 }
