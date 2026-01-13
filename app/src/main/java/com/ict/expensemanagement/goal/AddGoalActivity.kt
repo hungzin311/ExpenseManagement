@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.ict.expensemanagement.data.entity.SavingsGoal
+import com.ict.expensemanagement.data.entity.Transaction
 import com.ict.expensemanagement.data.repository.FirebaseRepository
 import com.ict.expensemanagement.databinding.ActivityAddGoalBinding
 import com.ict.expensemanagement.databinding.DialogContributionTypeBinding
@@ -19,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.min
@@ -64,11 +66,7 @@ class AddGoalActivity : AppCompatActivity() {
         }
 
         // Clear placeholders when screen opens
-        binding.goalTitleInput.setText("")
-        binding.amountInput.setText("")
-        binding.contributionTypeInput.setText("Yearly", false)
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US)
-        binding.deadlineInput.setText(dateFormat.format(selectedDeadline.time))
+        clearInputs()
     }
 
     private fun setupContributionType() {
@@ -177,9 +175,10 @@ class AddGoalActivity : AppCompatActivity() {
 
     private data class WeekItem(val label: String, val endDate: Calendar)
 
-    private fun showWeekPickerDialog(year: Int) {
-        val baseCal = selectedDeadline.clone() as Calendar
+    private fun showWeekPickerDialog(year: Int, month: Int) {
+        val baseCal = Calendar.getInstance()
         baseCal.set(Calendar.YEAR, year)
+        baseCal.set(Calendar.MONTH, month)
         val df = SimpleDateFormat("dd/MM", Locale.US)
         val monthDf = SimpleDateFormat("MMMM yyyy", Locale.US)
 
@@ -305,7 +304,32 @@ class AddGoalActivity : AppCompatActivity() {
             .setTitle("Select year")
             .setItems(labels) { dialog, which ->
                 val year = years[which]
-                showWeekPickerDialog(year)
+                showMonthForWeekPicker(year)
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showMonthForWeekPicker(year: Int) {
+        val today = Calendar.getInstance()
+        val thisYear = today.get(Calendar.YEAR)
+        val startMonth = if (year == thisYear) today.get(Calendar.MONTH) else Calendar.JANUARY
+
+        val monthNameDf = SimpleDateFormat("MMMM", Locale.US)
+        val months = (startMonth..Calendar.DECEMBER).toList()
+        val labels = months.map { monthIndex ->
+            val cal = Calendar.getInstance()
+            cal.set(Calendar.YEAR, year)
+            cal.set(Calendar.MONTH, monthIndex)
+            cal.set(Calendar.DAY_OF_MONTH, 1)
+            monthNameDf.format(cal.time)
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Select month")
+            .setItems(labels) { dialog, which ->
+                val month = months[which]
+                showWeekPickerDialog(year, month)
                 dialog.dismiss()
             }
             .show()
@@ -362,10 +386,43 @@ class AddGoalActivity : AppCompatActivity() {
 
                 lifecycleScope.launch {
                     try {
+                        var goalId: Int
+                        var transactionInsertError: Exception? = null
                         withContext(Dispatchers.IO) {
-                            firebaseRepository.insertGoal(goal)
+                            goalId = firebaseRepository.insertGoal(goal)
+
+                            // If user sets an initial current amount, record it as a transaction
+                            // (same logic as in SavingsActivity recordGoalAdjustment: deposit reduces savings)
+                            if (currentAmount > 0) {
+                                val delta = currentAmount - 0.0
+                                val adjustmentType = if (delta > 0) "Goal Deposit" else "Goal Withdrawal"
+                                val transaction = Transaction(
+                                    id = -1,
+                                    label = "$adjustmentType - ${title}",
+                                    amount = -delta,
+                                    description = "Goal adjustment for ${title}",
+                                    transactionDate = LocalDate.now().toString(),
+                                    userId = userId!!,
+                                    code = "",
+                                    linkedGoalId = goalId
+                                ).apply { setCode() }
+
+                                try {
+                                    firebaseRepository.insertTransaction(transaction)
+                                } catch (e: Exception) {
+                                    transactionInsertError = e
+                                }
+                            }
                         }
-                        Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
+                        if (transactionInsertError != null) {
+                            Toast.makeText(
+                                this@AddGoalActivity,
+                                "Goal added, but failed to record initial amount: ${transactionInsertError?.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(this@AddGoalActivity, "Goal added successfully", Toast.LENGTH_SHORT).show()
+                        }
                         setResult(RESULT_OK)
                         finish()
                     } catch (e: Exception) {

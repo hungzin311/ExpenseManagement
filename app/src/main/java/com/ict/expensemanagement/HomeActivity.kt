@@ -205,13 +205,15 @@ class HomeActivity : AppCompatActivity(), SpendsFragment.TransactionActionListen
         val id = userId ?: return
         val goal = withContext(Dispatchers.IO) {
             when {
+                // if transaction linked goalID --> tra ve goal tuong ung
                 transaction.linkedGoalId != null -> firebaseRepository.getGoalById(transaction.linkedGoalId)
-                else -> {
+                else -> { // else: xu ly voi label (title) cua goal
                     val goalTitle = transaction.label.substringAfter(" - ", "").trim()
                     if (goalTitle.isEmpty()) null else firebaseRepository.getGoalByTitle(id, goalTitle)
                 }
             }
-        } ?: return
+        } ?: return // if null (not found) --> return
+        // true: newAmount decrease (add transaction.amount but it is negative), false: newAmount increase
         val delta = if (revertAdjustment) transaction.amount else -transaction.amount
         val newAmount = (goal.currentAmount + delta).coerceIn(0.0, goal.targetAmount)
         withContext(Dispatchers.IO) {

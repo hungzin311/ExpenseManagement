@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
@@ -38,6 +39,9 @@ class SavingsActivity : AppCompatActivity() {
 
     companion object {
         private const val REQUEST_ADD_GOAL = 1001
+        private const val PREFS_ROLLOVER = "savings_rollover_prefs"
+        private const val KEY_LAST_MONTH = "last_month_key"
+        private const val KEY_LAST_REMAINING_GOAL_MONTH = "last_remaining_goal_month_key"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +55,103 @@ class SavingsActivity : AppCompatActivity() {
         setupRecyclerView()
         setupClickListeners()
         updateMonthYear()
+        handleMonthRolloverIfNeeded()
         fetchSavingsData()
+    }
+
+    private fun monthKey(date: LocalDate): String = "${date.year}-${date.monthValue}"
+    private fun handleMonthRolloverIfNeeded() {
+        val id = userId ?: return
+        val prefs = getSharedPreferences(PREFS_ROLLOVER, MODE_PRIVATE)
+
+        val today = LocalDate.now()
+        val currentKey = monthKey(today)
+        val lastKey = prefs.getString(KEY_LAST_MONTH, null)
+
+        // First run: initialize key_last_month (save trong share preference)
+        if (lastKey == null) {
+            prefs.edit().putString(KEY_LAST_MONTH, currentKey).apply()
+            return
+        }
+
+        // No rollover
+        if (lastKey == currentKey) return
+
+        val prevMonth = today.minusMonths(1)
+        val prevMonthKey = monthKey(prevMonth)
+
+        // key này để xác dinh da xu ly thang truoc chua
+        if (prefs.getString(KEY_LAST_REMAINING_GOAL_MONTH, null) == prevMonthKey) {
+            prefs.edit().putString(KEY_LAST_MONTH, currentKey).apply()
+            return
+        }
+
+        val monthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.US)
+        val remainingTitle = "Remaining ${prevMonth.format(monthYearFormatter)}"
+        val prevMonthEnd = today.withDayOfMonth(1).minusDays(1) // last day of previous month
+
+        lifecycleScope.launch {
+            try {
+                val created = withContext(Dispatchers.IO) {
+                    val transactions = firebaseRepository.getTransactionsByUserId(id)
+                    val prevFiltered = transactions.filter { tran ->
+                        try {
+                            val d = LocalDate.parse(tran.transactionDate)
+                            d.year == prevMonth.year && d.monthValue == prevMonth.monthValue
+                        } catch (_: Exception) {
+                            false
+                        }
+                    }
+
+                    val totalIncome = prevFiltered.filter { it.amount > 0 }.sumOf { it.amount }
+                    val totalExpenses = prevFiltered.filter { it.amount < 0 }.sumOf { abs(it.amount) }
+                    val prevSavings = totalIncome - totalExpenses
+
+                    if (prevSavings <= 0.0) return@withContext false
+
+                    // Avoid duplicates if the goal title already exists
+                    val existing = firebaseRepository.getGoalByTitle(id, remainingTitle)
+                    if (existing != null) return@withContext false
+
+                    val goal = SavingsGoal(
+                        id = 0,
+                        title = remainingTitle,
+                        targetAmount = prevSavings,
+                        currentAmount = prevSavings,
+                        iconResId = R.drawable.ic_box,
+                        userId = id
+                    )
+
+                    val goalId = firebaseRepository.insertGoal(goal)
+
+                    // Record the deposit on the last day of the previous month
+                    val deposit = Transaction(
+                        id = -1,
+                        label = "Goal Deposit - $remainingTitle",
+                        amount = -prevSavings,
+                        description = "Auto rollover from ${prevMonth.format(monthYearFormatter)}",
+                        transactionDate = prevMonthEnd.toString(),
+                        userId = id,
+                        code = "",
+                        linkedGoalId = goalId
+                    ).apply { setCode() }
+                    firebaseRepository.insertTransaction(deposit)
+                    true
+                }
+
+                // Mark rollover processed (even if nothing was created)
+                prefs.edit()
+                    .putString(KEY_LAST_MONTH, currentKey)
+                    .putString(KEY_LAST_REMAINING_GOAL_MONTH, prevMonthKey)
+                    .apply()
+
+                if (created) {
+                    fetchSavingsData()
+                }
+            } catch (_: Exception) {
+                prefs.edit().putString(KEY_LAST_MONTH, currentKey).apply()
+            }
+        }
     }
 
     private fun setupRecyclerView() {
@@ -106,9 +206,11 @@ class SavingsActivity : AppCompatActivity() {
                         false
                     }
                 }
+                // saving in this month
                 val totalIncome = monthFiltered.filter { it.amount > 0 }.sumOf { it.amount }
                 val totalExpenses = monthFiltered.filter { it.amount < 0 }.sumOf { abs(it.amount) }
                 val savings = totalIncome - totalExpenses
+                // current goal amount
                 val loadedGoals = firebaseRepository.getGoalsByUserId(id)
                 val totalTarget = loadedGoals.sumOf { it.targetAmount }
                 val totalGoalCurrent = loadedGoals.sumOf { it.currentAmount }
@@ -204,6 +306,20 @@ class SavingsActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         withContext(Dispatchers.IO) {
+                            // Refund money currently allocated to this goal back into savings
+                            if (goal.currentAmount > 0) {
+                                val refund = Transaction(
+                                    id = -1,
+                                    label = "Goal Deleted - ${goal.title}",
+                                    amount = goal.currentAmount,
+                                    description = "Refund from deleted goal \"${goal.title}\"",
+                                    transactionDate = LocalDate.now().toString(),
+                                    userId = userId!!,
+                                    code = "",
+                                    linkedGoalId = null
+                                ).apply { setCode() }
+                                firebaseRepository.insertTransaction(refund)
+                            }
                             firebaseRepository.deleteGoal(goal.id)
                         }
                         Toast.makeText(this@SavingsActivity, "Goal deleted", Toast.LENGTH_SHORT).show()

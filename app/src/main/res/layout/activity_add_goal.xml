@@ -194,8 +194,7 @@
                         android:layout_height="wrap_content"
                         android:inputType="none"
                         android:focusable="false"
-                        android:clickable="true"
-                        android:hint="03/04/2026" />
+                        android:clickable="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- ADD GOAL Button -->
