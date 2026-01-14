@@ -2,23 +2,24 @@
 
 Ứng dụng quản lý chi tiêu cá nhân được phát triển bằng Android + Kotlin. Ứng dụng cho phép người dùng quản lý thu/chi, mục tiêu tiết kiệm và xem danh sách giao dịch. Backend sử dụng **Firebase Authentication** và **Firebase Realtime Database**.
 
-## 📋 Tổng quan project
+## Tổng quan project
 
 ### Các tính năng hiện có
-- ✅ Đăng ký/Đăng nhập với Firebase Authentication (Email/Password)
-- ✅ Thêm giao dịch Thu nhập & Chi tiêu
-- ✅ Xem danh sách giao dịch theo user và cập nhật dashboard ở màn Home
-- ✅ Xoá giao dịch bằng thao tác **swipe** (vuốt sang phải) trong danh sách ở Home + **Undo**
-- ✅ Quản lý mục tiêu tiết kiệm (Savings Goals):
+- Đăng ký/Đăng nhập với Firebase Authentication (Email/Password)
+- Thêm giao dịch Thu nhập & Chi tiêu
+- Xem danh sách giao dịch theo user và cập nhật dashboard ở màn Home
+- Xoá giao dịch bằng thao tác **swipe** (vuốt sang phải) trong danh sách ở Home + **Undo**
+- Quản lý mục tiêu tiết kiệm (Savings Goals):
   - Thêm goal
   - Cập nhật `currentAmount`
   - Khi chỉnh `currentAmount`, app tự tạo transaction điều chỉnh “Goal Deposit/Withdrawal - <goal>”
   - Khi xoá transaction điều chỉnh goal từ Home, `currentAmount` của goal được hoàn tác tương ứng
-- ✅ Quản lý hồ sơ người dùng (Profile)
+  - Tự động thêm goal khi hết tháng
+- Quản lý hồ sơ người dùng (Profile)
 
 ---
 
-## 🏗️ Kiến trúc & tổ chức mã nguồn
+## Kiến trúc & tổ chức mã nguồn
 
 Project tổ chức theo hướng **Repository Pattern** và điều hướng chủ yếu bằng **Activity + Intent**:
 
@@ -50,7 +51,7 @@ Project tổ chức theo hướng **Repository Pattern** và điều hướng ch
 
 ---
 
-## 🧩 Các kỹ thuật Android chính (đúng hiện trạng code)
+## Các kỹ thuật Android chính (đúng hiện trạng code)
 
 ### 1) ViewBinding & DataBinding
 Project bật cả 2 trong `app/build.gradle.kts`. Thực tế code sử dụng **ViewBinding**:
@@ -148,7 +149,7 @@ goals/
 
 ---
 
-## 🔄 Flow của ứng dụng
+## Flow của ứng dụng
 
 ### 1) Authentication Flow
 ```
@@ -210,7 +211,7 @@ SavingsActivity
 
 ---
 
-## 📦 Các thành phần chính
+## Các thành phần chính
 
 ### 1) Activities
 | Activity | Chức năng |
@@ -246,7 +247,7 @@ SavingsActivity
 
 ---
 
-## 🛠️ Công nghệ & thư viện
+## Công nghệ & thư viện
 
 ### Core
 - Kotlin
@@ -273,7 +274,7 @@ SavingsActivity
 
 ---
 
-## 🚀 Cách chạy project
+## Cách chạy project
 
 ### Yêu cầu
 - Android Studio
@@ -307,5 +308,5 @@ app/src/main/java/com/ict/expensemanagement/
 
 ---
 
-## 📝 Kết luận
+## Kết luận
 Project triển khai mô hình quản lý thu/chi với **Firebase Auth + Realtime Database**, tổ chức theo **Repository Pattern** và dùng **Coroutines** để xử lý bất đồng bộ. Ứng dụng đã có luồng quản lý giao dịch, xoá/undo, và đồng bộ mục tiêu tiết kiệm (goal) thông qua transaction điều chỉnh.
